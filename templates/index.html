@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservas Praia da Luz</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #1d1d1f;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 0;
+        }
+
+        h1 {
+            font-size: 48px;
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            font-size: 21px;
+            color: #86868b;
+            font-weight: 400;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 968px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .calendar-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+
+        .section-title {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1d1d1f;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .calendar-header {
+            text-align: center;
+            font-weight: 600;
+            font-size: 14px;
+            color: #86868b;
+            padding: 10px 0;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .calendar-day.empty {
+            background: transparent;
+            cursor: default;
+        }
+
+        .calendar-day.today {
+            background: #007aff;
+            color: white;
+            font-weight: 600;
+        }
+
+        .calendar-day.has-reservation {
+            background: #34c759;
+            color: white;
+            font-weight: 500;
+        }
+
+        .calendar-day.has-reservation:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(52, 199, 89, 0.4);
+        }
+
+        .reservation-names {
+            font-size: 10px;
+            margin-top: 4px;
+            text-align: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            width: 100%;
+        }
+
+        .month-navigation {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .nav-button {
+            background: #f5f5f7;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #1d1d1f;
+        }
+
+        .nav-button:hover {
+            background: #e5e5e7;
+            transform: translateY(-1px);
+        }
+
+        .current-month {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1d1d1f;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #1d1d1f;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #d2d2d7;
+            border-radius: 12px;
+            font-size: 16px;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            background: #f5f5f7;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #007aff;
+            background: white;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .button {
+            background: #007aff;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 14px 24px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        .button:hover {
+            background: #0051d5;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.4);
+        }
+
+        .button:active {
+            transform: translateY(0);
+        }
+
+        .button.secondary {
+            background: #f5f5f7;
+            color: #1d1d1f;
+        }
+
+        .button.secondary:hover {
+            background: #e5e5e7;
+        }
+
+        .button.danger {
+            background: #ff3b30;
+        }
+
+        .button.danger:hover {
+            background: #d70015;
+        }
+
+        .reservations-list {
+            margin-top: 30px;
+        }
+
+        .reservation-item {
+            background: #f5f5f7;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            transition: all 0.2s ease;
+        }
+
+        .reservation-item:hover {
+            background: #e5e5e7;
+        }
+
+        .reservation-info {
+            flex: 1;
+        }
+
+        .reservation-name {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 4px;
+            color: #1d1d1f;
+        }
+
+        .reservation-dates {
+            font-size: 14px;
+            color: #86868b;
+            margin-bottom: 4px;
+        }
+
+        .reservation-notes {
+            font-size: 13px;
+            color: #86868b;
+            font-style: italic;
+        }
+
+        .reservation-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-button {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            font-size: 18px;
+        }
+
+        .icon-button:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .alert.error {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
+
+        .alert.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #86868b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Praia da Luz</h1>
+            <p class="subtitle">Calendário de Reservas</p>
+        </header>
+
+        <div class="main-content">
+            <div class="calendar-section">
+                <div class="month-navigation">
+                    <button class="nav-button" onclick="changeMonth(-1)">← Anterior</button>
+                    <div class="current-month" id="currentMonth"></div>
+                    <button class="nav-button" onclick="changeMonth(1)">Próximo →</button>
+                </div>
+                <div id="alertContainer"></div>
+                <div class="calendar-grid" id="calendarGrid"></div>
+                <div class="reservations-list" id="reservationsList"></div>
+            </div>
+
+            <div class="form-section">
+                <h2 class="section-title">Nova Reserva</h2>
+                <form id="reservationForm">
+                    <div class="form-group">
+                        <label for="name">Nome</label>
+                        <input type="text" id="name" name="name" required placeholder="Seu nome">
+                    </div>
+                    <div class="form-group">
+                        <label for="start_date">Data de Início</label>
+                        <input type="date" id="start_date" name="start_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="end_date">Data de Fim</label>
+                        <input type="date" id="end_date" name="end_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="notes">Notas (opcional)</label>
+                        <textarea id="notes" name="notes" placeholder="Alguma informação adicional..."></textarea>
+                    </div>
+                    <button type="submit" class="button">Criar Reserva</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentDate = new Date();
+        let reservations = [];
+        let editingId = null;
+
+        const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+            'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+        const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+        function showAlert(message, type = 'success') {
+            const container = document.getElementById('alertContainer');
+            container.innerHTML = `<div class="alert ${type}">${message}</div>`;
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+
+        function changeMonth(direction) {
+            currentDate.setMonth(currentDate.getMonth() + direction);
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            
+            document.getElementById('currentMonth').textContent = 
+                `${monthNames[month]} ${year}`;
+
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startingDayOfWeek = firstDay.getDay();
+
+            const calendarGrid = document.getElementById('calendarGrid');
+            calendarGrid.innerHTML = '';
+
+            // Add day headers
+            dayNames.forEach(day => {
+                const header = document.createElement('div');
+                header.className = 'calendar-header';
+                header.textContent = day;
+                calendarGrid.appendChild(header);
+            });
+
+            // Add empty cells for days before month starts
+            for (let i = 0; i < startingDayOfWeek; i++) {
+                const empty = document.createElement('div');
+                empty.className = 'calendar-day empty';
+                calendarGrid.appendChild(empty);
+            }
+
+            // Add days of the month
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayDate = new Date(year, month, day);
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                
+                const dayReservations = getReservationsForDate(dayDate);
+                const isToday = dayDate.getTime() === today.getTime();
+                
+                if (isToday) {
+                    dayElement.classList.add('today');
+                }
+                
+                if (dayReservations.length > 0) {
+                    dayElement.classList.add('has-reservation');
+                    const names = dayReservations.map(r => r.name).join(', ');
+                    dayElement.innerHTML = `
+                        <div>${day}</div>
+                        <div class="reservation-names">${names}</div>
+                    `;
+                } else {
+                    dayElement.textContent = day;
+                }
+                
+                calendarGrid.appendChild(dayElement);
+            }
+
+            renderReservationsList();
+        }
+
+        function getReservationsForDate(date) {
+            return reservations.filter(res => {
+                const start = new Date(res.start_date);
+                const end = new Date(res.end_date);
+                return date >= start && date <= end;
+            });
+        }
+
+        function renderReservationsList() {
+            const list = document.getElementById('reservationsList');
+            if (reservations.length === 0) {
+                list.innerHTML = '<div class="loading">Nenhuma reserva ainda</div>';
+                return;
+            }
+
+            // Sort by start date
+            const sorted = [...reservations].sort((a, b) => 
+                new Date(a.start_date) - new Date(b.start_date)
+            );
+
+            list.innerHTML = '<h2 class="section-title">Reservas</h2>';
+            sorted.forEach(res => {
+                const item = document.createElement('div');
+                item.className = 'reservation-item';
+                const start = new Date(res.start_date);
+                const end = new Date(res.end_date);
+                const startStr = start.toLocaleDateString('pt-PT');
+                const endStr = end.toLocaleDateString('pt-PT');
+                
+                item.innerHTML = `
+                    <div class="reservation-info">
+                        <div class="reservation-name">${res.name}</div>
+                        <div class="reservation-dates">${startStr} - ${endStr}</div>
+                        ${res.notes ? `<div class="reservation-notes">${res.notes}</div>` : ''}
+                    </div>
+                    <div class="reservation-actions">
+                        <button class="icon-button" onclick="deleteReservation('${res.id}')" title="Eliminar">🗑️</button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        async function loadReservations() {
+            try {
+                const response = await fetch('/api/reservations');
+                reservations = await response.json();
+                renderCalendar();
+            } catch (error) {
+                console.error('Error loading reservations:', error);
+                showAlert('Erro ao carregar reservas', 'error');
+            }
+        }
+
+        async function createReservation(data) {
+            try {
+                const response = await fetch('/api/reservations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data),
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Erro ao criar reserva');
+                }
+
+                const newReservation = await response.json();
+                reservations.push(newReservation);
+                renderCalendar();
+                document.getElementById('reservationForm').reset();
+                showAlert('Reserva criada com sucesso!');
+            } catch (error) {
+                showAlert(error.message, 'error');
+            }
+        }
+
+        async function deleteReservation(id) {
+            if (!confirm('Tem certeza que deseja eliminar esta reserva?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/reservations/${id}`, {
+                    method: 'DELETE',
+                });
+
+                if (!response.ok) {
+                    throw new Error('Erro ao eliminar reserva');
+                }
+
+                reservations = reservations.filter(r => r.id !== id);
+                renderCalendar();
+                showAlert('Reserva eliminada com sucesso!');
+            } catch (error) {
+                showAlert('Erro ao eliminar reserva', 'error');
+            }
+        }
+
+        document.getElementById('reservationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = {
+                name: formData.get('name'),
+                start_date: formData.get('start_date'),
+                end_date: formData.get('end_date'),
+                notes: formData.get('notes') || '',
+            };
+
+            await createReservation(data);
+        });
+
+        // Set minimum date to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('start_date').min = today;
+        document.getElementById('end_date').min = today;
+
+        // Initialize
+        loadReservations();
+        renderCalendar();
+    </script>
+</body>
+</html>
+
