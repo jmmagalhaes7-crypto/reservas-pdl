@@ -481,6 +481,81 @@
             padding: 40px;
             color: #86868b;
         }
+
+        .feedback-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-top: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .feedback-section {
+                padding: 20px;
+                border-radius: 16px;
+                margin-top: 20px;
+            }
+        }
+
+        .feedback-toggle {
+            background: #f5f5f7;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #1d1d1f;
+            width: 100%;
+            margin-bottom: 20px;
+            touch-action: manipulation;
+            min-height: 44px;
+        }
+
+        .feedback-toggle:hover {
+            background: #e5e5e7;
+        }
+
+        .feedback-form-container {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .feedback-form-container.open {
+            max-height: 1000px;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #d2d2d7;
+            border-radius: 12px;
+            font-size: 16px;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            background: #f5f5f7;
+            -webkit-appearance: none;
+            appearance: none;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            select {
+                padding: 14px 16px;
+                font-size: 16px;
+                min-height: 44px;
+            }
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #007aff;
+            background: white;
+        }
     </style>
 </head>
 <body>
@@ -522,6 +597,35 @@
                         <textarea id="notes" name="notes" placeholder="Alguma informação adicional..."></textarea>
                     </div>
                     <button type="submit" class="button">Criar Reserva</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="feedback-section">
+            <button class="feedback-toggle" onclick="toggleFeedbackForm()" id="feedbackToggle">
+                💬 Enviar Feedback, Sugestão ou Revisão
+            </button>
+            <div class="feedback-form-container" id="feedbackFormContainer">
+                <h2 class="section-title">Feedback</h2>
+                <form id="feedbackForm">
+                    <div class="form-group">
+                        <label for="feedback_name">Nome (opcional)</label>
+                        <input type="text" id="feedback_name" name="feedback_name" placeholder="Seu nome">
+                    </div>
+                    <div class="form-group">
+                        <label for="feedback_type">Tipo</label>
+                        <select id="feedback_type" name="feedback_type" required>
+                            <option value="suggestion">Sugestão</option>
+                            <option value="review">Revisão/Comentário</option>
+                            <option value="bug">Problema/Bug</option>
+                            <option value="other">Outro</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="feedback_message">Mensagem</label>
+                        <textarea id="feedback_message" name="feedback_message" required placeholder="Escreva aqui o seu feedback, sugestão ou comentário..." rows="5"></textarea>
+                    </div>
+                    <button type="submit" class="button">Enviar Feedback</button>
                 </form>
             </div>
         </div>
@@ -732,6 +836,56 @@
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('start_date').min = today;
         document.getElementById('end_date').min = today;
+
+        // Feedback form toggle
+        function toggleFeedbackForm() {
+            const container = document.getElementById('feedbackFormContainer');
+            const toggle = document.getElementById('feedbackToggle');
+            container.classList.toggle('open');
+            if (container.classList.contains('open')) {
+                toggle.textContent = '💬 Ocultar Formulário de Feedback';
+            } else {
+                toggle.textContent = '💬 Enviar Feedback, Sugestão ou Revisão';
+            }
+        }
+
+        // Submit feedback
+        async function submitFeedback(data) {
+            try {
+                const response = await fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data),
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Erro ao enviar feedback');
+                }
+
+                const newFeedback = await response.json();
+                document.getElementById('feedbackForm').reset();
+                showAlert('Feedback enviado com sucesso! Obrigado!');
+                toggleFeedbackForm(); // Close form after submission
+            } catch (error) {
+                showAlert(error.message, 'error');
+            }
+        }
+
+        document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = {
+                name: formData.get('feedback_name') || '',
+                type: formData.get('feedback_type'),
+                message: formData.get('feedback_message'),
+            };
+
+            await submitFeedback(data);
+        });
 
         // Initialize
         loadReservations();

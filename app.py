@@ -5,8 +5,9 @@ import os
 
 app = Flask(__name__)
 
-# File to store reservations
+# Files to store data
 RESERVATIONS_FILE = 'reservations.json'
+FEEDBACK_FILE = 'feedback.json'
 
 def load_reservations():
     """Load reservations from JSON file"""
@@ -19,6 +20,18 @@ def save_reservations(reservations):
     """Save reservations to JSON file"""
     with open(RESERVATIONS_FILE, 'w', encoding='utf-8') as f:
         json.dump(reservations, f, indent=2, ensure_ascii=False)
+
+def load_feedback():
+    """Load feedback from JSON file"""
+    if os.path.exists(FEEDBACK_FILE):
+        with open(FEEDBACK_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return []
+
+def save_feedback(feedback):
+    """Save feedback to JSON file"""
+    with open(FEEDBACK_FILE, 'w', encoding='utf-8') as f:
+        json.dump(feedback, f, indent=2, ensure_ascii=False)
 
 def validate_dates(start_date, end_date):
     """Validate that start date is before end date"""
@@ -138,6 +151,36 @@ def update_reservation(reservation_id):
     
     save_reservations(reservations)
     return jsonify(reservation), 200
+
+@app.route('/api/feedback', methods=['GET'])
+def get_feedback():
+    """Get all feedback (optional - for admin review)"""
+    feedback = load_feedback()
+    return jsonify(feedback)
+
+@app.route('/api/feedback', methods=['POST'])
+def create_feedback():
+    """Create a new feedback/review/suggestion"""
+    data = request.json
+    
+    # Validate required fields
+    if not data.get('message'):
+        return jsonify({'error': 'Message is required'}), 400
+    
+    # Create new feedback
+    new_feedback = {
+        'id': str(int(datetime.now().timestamp() * 1000)),
+        'name': data.get('name', 'Anónimo'),
+        'message': data['message'],
+        'type': data.get('type', 'suggestion'),  # review, suggestion, bug, other
+        'created_at': datetime.now().isoformat()
+    }
+    
+    feedback = load_feedback()
+    feedback.append(new_feedback)
+    save_feedback(feedback)
+    
+    return jsonify(new_feedback), 201
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)

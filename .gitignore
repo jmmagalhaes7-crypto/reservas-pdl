@@ -27,8 +27,9 @@ wheels/
 instance/
 .webassets-cache
 
-# Reservations data (opcional - remova se quiser versionar)
+# Data files (created automatically, persist on server)
 reservations.json
+feedback.json
 
 # IDE
 .vscode/
