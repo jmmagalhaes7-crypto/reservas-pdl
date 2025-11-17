@@ -28,8 +28,10 @@ instance/
 .webassets-cache
 
 # Data files (created automatically, persist on server)
+data/
 reservations.json
 feedback.json
+*.tmp
 
 # IDE
 .vscode/

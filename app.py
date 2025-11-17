@@ -5,33 +5,110 @@ import os
 
 app = Flask(__name__)
 
-# Files to store data
-RESERVATIONS_FILE = 'reservations.json'
-FEEDBACK_FILE = 'feedback.json'
+# Files to store data - use absolute path for better persistence
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+RESERVATIONS_FILE = os.path.join(DATA_DIR, 'reservations.json')
+FEEDBACK_FILE = os.path.join(DATA_DIR, 'feedback.json')
+
+# Ensure data directory exists
+os.makedirs(DATA_DIR, exist_ok=True)
+
+# Initialize files if they don't exist
+def ensure_data_files():
+    """Ensure data files exist and are valid JSON"""
+    if not os.path.exists(RESERVATIONS_FILE):
+        with open(RESERVATIONS_FILE, 'w', encoding='utf-8') as f:
+            json.dump([], f, indent=2, ensure_ascii=False)
+    
+    if not os.path.exists(FEEDBACK_FILE):
+        with open(FEEDBACK_FILE, 'w', encoding='utf-8') as f:
+            json.dump([], f, indent=2, ensure_ascii=False)
+    
+    # Validate existing files are valid JSON
+    try:
+        with open(RESERVATIONS_FILE, 'r', encoding='utf-8') as f:
+            json.load(f)
+    except (json.JSONDecodeError, ValueError):
+        # File is corrupted, reset it
+        with open(RESERVATIONS_FILE, 'w', encoding='utf-8') as f:
+            json.dump([], f, indent=2, ensure_ascii=False)
+    
+    try:
+        with open(FEEDBACK_FILE, 'r', encoding='utf-8') as f:
+            json.load(f)
+    except (json.JSONDecodeError, ValueError):
+        # File is corrupted, reset it
+        with open(FEEDBACK_FILE, 'w', encoding='utf-8') as f:
+            json.dump([], f, indent=2, ensure_ascii=False)
+
+# Initialize on startup
+ensure_data_files()
 
 def load_reservations():
     """Load reservations from JSON file"""
-    if os.path.exists(RESERVATIONS_FILE):
-        with open(RESERVATIONS_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return []
+    try:
+        if os.path.exists(RESERVATIONS_FILE):
+            with open(RESERVATIONS_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                # Ensure it's a list
+                return data if isinstance(data, list) else []
+        else:
+            # File doesn't exist, create it
+            ensure_data_files()
+            return []
+    except (json.JSONDecodeError, ValueError, IOError) as e:
+        # If file is corrupted or can't be read, reset it
+        print(f"Error loading reservations: {e}")
+        ensure_data_files()
+        return []
 
 def save_reservations(reservations):
     """Save reservations to JSON file"""
-    with open(RESERVATIONS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(reservations, f, indent=2, ensure_ascii=False)
+    try:
+        # Ensure directory exists
+        os.makedirs(DATA_DIR, exist_ok=True)
+        # Write to temporary file first, then rename (atomic operation)
+        temp_file = RESERVATIONS_FILE + '.tmp'
+        with open(temp_file, 'w', encoding='utf-8') as f:
+            json.dump(reservations, f, indent=2, ensure_ascii=False)
+        # Atomic rename
+        os.replace(temp_file, RESERVATIONS_FILE)
+    except IOError as e:
+        print(f"Error saving reservations: {e}")
+        raise
 
 def load_feedback():
     """Load feedback from JSON file"""
-    if os.path.exists(FEEDBACK_FILE):
-        with open(FEEDBACK_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return []
+    try:
+        if os.path.exists(FEEDBACK_FILE):
+            with open(FEEDBACK_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                # Ensure it's a list
+                return data if isinstance(data, list) else []
+        else:
+            # File doesn't exist, create it
+            ensure_data_files()
+            return []
+    except (json.JSONDecodeError, ValueError, IOError) as e:
+        # If file is corrupted or can't be read, reset it
+        print(f"Error loading feedback: {e}")
+        ensure_data_files()
+        return []
 
 def save_feedback(feedback):
     """Save feedback to JSON file"""
-    with open(FEEDBACK_FILE, 'w', encoding='utf-8') as f:
-        json.dump(feedback, f, indent=2, ensure_ascii=False)
+    try:
+        # Ensure directory exists
+        os.makedirs(DATA_DIR, exist_ok=True)
+        # Write to temporary file first, then rename (atomic operation)
+        temp_file = FEEDBACK_FILE + '.tmp'
+        with open(temp_file, 'w', encoding='utf-8') as f:
+            json.dump(feedback, f, indent=2, ensure_ascii=False)
+        # Atomic rename
+        os.replace(temp_file, FEEDBACK_FILE)
+    except IOError as e:
+        print(f"Error saving feedback: {e}")
+        raise
 
 def validate_dates(start_date, end_date):
     """Validate that start date is before end date"""
@@ -42,6 +119,8 @@ def validate_dates(start_date, end_date):
 @app.route('/')
 def index():
     """Main page"""
+    # Ensure data files exist on each request (safety check)
+    ensure_data_files()
     return render_template('index.html')
 
 @app.route('/api/reservations', methods=['GET'])
