@@ -2,20 +2,76 @@ from flask import Flask, render_template, request, jsonify
 from datetime import datetime, date
 import json
 import os
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 
-# Files to store data - use absolute path for better persistence
+# Database configuration
+DATABASE_URL = os.getenv('DATABASE_URL')
+
+def get_db_connection():
+    """Get database connection"""
+    if DATABASE_URL:
+        try:
+            conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+            return conn
+        except Exception as e:
+            print(f"Database connection error: {e}")
+            return None
+    return None
+
+def init_db():
+    """Initialize database tables"""
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor()
+            # Create reservations table
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS reservations (
+                    id VARCHAR(255) PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    start_date DATE NOT NULL,
+                    end_date DATE NOT NULL,
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            # Create feedback table
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS feedback (
+                    id VARCHAR(255) PRIMARY KEY,
+                    name VARCHAR(255),
+                    message TEXT NOT NULL,
+                    type VARCHAR(50),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            conn.commit()
+            cur.close()
+            conn.close()
+            print("Database initialized successfully")
+        except Exception as e:
+            print(f"Database initialization error: {e}")
+    else:
+        print("Warning: No database connection, falling back to JSON files")
+
+# Initialize database on startup
+init_db()
+
+# Fallback to JSON files if no database
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 RESERVATIONS_FILE = os.path.join(DATA_DIR, 'reservations.json')
 FEEDBACK_FILE = os.path.join(DATA_DIR, 'feedback.json')
 
-# Ensure data directory exists
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# Initialize files if they don't exist
 def ensure_data_files():
-    """Ensure data files exist and are valid JSON"""
+    """Ensure data files exist and are valid JSON (fallback only)"""
     if not os.path.exists(RESERVATIONS_FILE):
         with open(RESERVATIONS_FILE, 'w', encoding='utf-8') as f:
             json.dump([], f, indent=2, ensure_ascii=False)
@@ -23,91 +79,144 @@ def ensure_data_files():
     if not os.path.exists(FEEDBACK_FILE):
         with open(FEEDBACK_FILE, 'w', encoding='utf-8') as f:
             json.dump([], f, indent=2, ensure_ascii=False)
-    
-    # Validate existing files are valid JSON
-    try:
-        with open(RESERVATIONS_FILE, 'r', encoding='utf-8') as f:
-            json.load(f)
-    except (json.JSONDecodeError, ValueError):
-        # File is corrupted, reset it
-        with open(RESERVATIONS_FILE, 'w', encoding='utf-8') as f:
-            json.dump([], f, indent=2, ensure_ascii=False)
-    
-    try:
-        with open(FEEDBACK_FILE, 'r', encoding='utf-8') as f:
-            json.load(f)
-    except (json.JSONDecodeError, ValueError):
-        # File is corrupted, reset it
-        with open(FEEDBACK_FILE, 'w', encoding='utf-8') as f:
-            json.dump([], f, indent=2, ensure_ascii=False)
-
-# Initialize on startup
-ensure_data_files()
 
 def load_reservations():
-    """Load reservations from JSON file"""
+    """Load reservations from database or JSON file"""
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute('SELECT * FROM reservations ORDER BY start_date')
+            reservations = cur.fetchall()
+            cur.close()
+            conn.close()
+            # Convert to list of dicts
+            return [dict(r) for r in reservations]
+        except Exception as e:
+            print(f"Error loading reservations from database: {e}")
+            conn.close()
+    
+    # Fallback to JSON
     try:
         if os.path.exists(RESERVATIONS_FILE):
             with open(RESERVATIONS_FILE, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                # Ensure it's a list
                 return data if isinstance(data, list) else []
-        else:
-            # File doesn't exist, create it
-            ensure_data_files()
-            return []
-    except (json.JSONDecodeError, ValueError, IOError) as e:
-        # If file is corrupted or can't be read, reset it
-        print(f"Error loading reservations: {e}")
-        ensure_data_files()
-        return []
+    except Exception as e:
+        print(f"Error loading reservations from file: {e}")
+    return []
 
 def save_reservations(reservations):
-    """Save reservations to JSON file"""
+    """Save reservations to database or JSON file"""
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor()
+            # Clear existing reservations
+            cur.execute('DELETE FROM reservations')
+            # Insert all reservations
+            for res in reservations:
+                cur.execute('''
+                    INSERT INTO reservations (id, name, start_date, end_date, notes, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (id) DO UPDATE SET
+                        name = EXCLUDED.name,
+                        start_date = EXCLUDED.start_date,
+                        end_date = EXCLUDED.end_date,
+                        notes = EXCLUDED.notes
+                ''', (
+                    res['id'],
+                    res['name'],
+                    res['start_date'],
+                    res['end_date'],
+                    res.get('notes', ''),
+                    res.get('created_at', datetime.now().isoformat())
+                ))
+            conn.commit()
+            cur.close()
+            conn.close()
+            return
+        except Exception as e:
+            print(f"Error saving reservations to database: {e}")
+            conn.close()
+    
+    # Fallback to JSON
     try:
-        # Ensure directory exists
         os.makedirs(DATA_DIR, exist_ok=True)
-        # Write to temporary file first, then rename (atomic operation)
         temp_file = RESERVATIONS_FILE + '.tmp'
         with open(temp_file, 'w', encoding='utf-8') as f:
             json.dump(reservations, f, indent=2, ensure_ascii=False)
-        # Atomic rename
         os.replace(temp_file, RESERVATIONS_FILE)
     except IOError as e:
-        print(f"Error saving reservations: {e}")
+        print(f"Error saving reservations to file: {e}")
         raise
 
 def load_feedback():
-    """Load feedback from JSON file"""
+    """Load feedback from database or JSON file"""
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute('SELECT * FROM feedback ORDER BY created_at DESC')
+            feedback = cur.fetchall()
+            cur.close()
+            conn.close()
+            return [dict(f) for f in feedback]
+        except Exception as e:
+            print(f"Error loading feedback from database: {e}")
+            conn.close()
+    
+    # Fallback to JSON
     try:
         if os.path.exists(FEEDBACK_FILE):
             with open(FEEDBACK_FILE, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                # Ensure it's a list
                 return data if isinstance(data, list) else []
-        else:
-            # File doesn't exist, create it
-            ensure_data_files()
-            return []
-    except (json.JSONDecodeError, ValueError, IOError) as e:
-        # If file is corrupted or can't be read, reset it
-        print(f"Error loading feedback: {e}")
-        ensure_data_files()
-        return []
+    except Exception as e:
+        print(f"Error loading feedback from file: {e}")
+    return []
 
 def save_feedback(feedback):
-    """Save feedback to JSON file"""
+    """Save feedback to database or JSON file"""
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor()
+            # Clear existing feedback
+            cur.execute('DELETE FROM feedback')
+            # Insert all feedback
+            for fb in feedback:
+                cur.execute('''
+                    INSERT INTO feedback (id, name, message, type, created_at)
+                    VALUES (%s, %s, %s, %s, %s)
+                    ON CONFLICT (id) DO UPDATE SET
+                        name = EXCLUDED.name,
+                        message = EXCLUDED.message,
+                        type = EXCLUDED.type
+                ''', (
+                    fb['id'],
+                    fb.get('name', 'Anónimo'),
+                    fb['message'],
+                    fb.get('type', 'suggestion'),
+                    fb.get('created_at', datetime.now().isoformat())
+                ))
+            conn.commit()
+            cur.close()
+            conn.close()
+            return
+        except Exception as e:
+            print(f"Error saving feedback to database: {e}")
+            conn.close()
+    
+    # Fallback to JSON
     try:
-        # Ensure directory exists
         os.makedirs(DATA_DIR, exist_ok=True)
-        # Write to temporary file first, then rename (atomic operation)
         temp_file = FEEDBACK_FILE + '.tmp'
         with open(temp_file, 'w', encoding='utf-8') as f:
             json.dump(feedback, f, indent=2, ensure_ascii=False)
-        # Atomic rename
         os.replace(temp_file, FEEDBACK_FILE)
     except IOError as e:
-        print(f"Error saving feedback: {e}")
+        print(f"Error saving feedback to file: {e}")
         raise
 
 def validate_dates(start_date, end_date):
@@ -119,7 +228,6 @@ def validate_dates(start_date, end_date):
 @app.route('/')
 def index():
     """Main page"""
-    # Ensure data files exist on each request (safety check)
     ensure_data_files()
     return render_template('index.html')
 
@@ -251,7 +359,7 @@ def create_feedback():
         'id': str(int(datetime.now().timestamp() * 1000)),
         'name': data.get('name', 'Anónimo'),
         'message': data['message'],
-        'type': data.get('type', 'suggestion'),  # review, suggestion, bug, other
+        'type': data.get('type', 'suggestion'),
         'created_at': datetime.now().isoformat()
     }
     
@@ -263,4 +371,3 @@ def create_feedback():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)
-
