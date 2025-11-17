@@ -2,7 +2,10 @@
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#007aff">
     <title>Reservas Praia da Luz</title>
     <style>
         * {
@@ -17,6 +20,14 @@
             min-height: 100vh;
             padding: 20px;
             color: #1d1d1f;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
         }
 
         .container {
@@ -44,6 +55,21 @@
             font-weight: 400;
         }
 
+        @media (max-width: 768px) {
+            header {
+                margin-bottom: 20px;
+                padding: 20px 0;
+            }
+
+            h1 {
+                font-size: 32px;
+            }
+
+            .subtitle {
+                font-size: 18px;
+            }
+        }
+
         .main-content {
             display: grid;
             grid-template-columns: 1fr 400px;
@@ -54,6 +80,12 @@
         @media (max-width: 968px) {
             .main-content {
                 grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                gap: 20px;
             }
         }
 
@@ -76,6 +108,19 @@
             top: 20px;
         }
 
+        @media (max-width: 768px) {
+            .calendar-section {
+                padding: 20px;
+                border-radius: 16px;
+            }
+
+            .form-section {
+                padding: 20px;
+                border-radius: 16px;
+                position: static;
+            }
+        }
+
         .section-title {
             font-size: 28px;
             font-weight: 600;
@@ -83,11 +128,25 @@
             color: #1d1d1f;
         }
 
+        @media (max-width: 768px) {
+            .section-title {
+                font-size: 22px;
+                margin-bottom: 16px;
+            }
+        }
+
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             gap: 8px;
             margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .calendar-grid {
+                gap: 4px;
+                margin-bottom: 16px;
+            }
         }
 
         .calendar-header {
@@ -110,6 +169,17 @@
             transition: all 0.2s ease;
             cursor: pointer;
             position: relative;
+            min-height: 44px;
+            touch-action: manipulation;
+        }
+
+        @media (max-width: 768px) {
+            .calendar-day {
+                padding: 6px 4px;
+                font-size: 12px;
+                border-radius: 8px;
+                min-height: 40px;
+            }
         }
 
         .calendar-day.empty {
@@ -144,11 +214,24 @@
             width: 100%;
         }
 
+        @media (max-width: 768px) {
+            .reservation-names {
+                font-size: 9px;
+                margin-top: 2px;
+            }
+        }
+
         .month-navigation {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .month-navigation {
+                margin-bottom: 16px;
+            }
         }
 
         .nav-button {
@@ -161,6 +244,17 @@
             cursor: pointer;
             transition: all 0.2s ease;
             color: #1d1d1f;
+            touch-action: manipulation;
+            min-height: 44px;
+        }
+
+        @media (max-width: 768px) {
+            .nav-button {
+                padding: 10px 16px;
+                font-size: 14px;
+                border-radius: 10px;
+                min-height: 44px;
+            }
         }
 
         .nav-button:hover {
@@ -172,6 +266,12 @@
             font-size: 24px;
             font-weight: 600;
             color: #1d1d1f;
+        }
+
+        @media (max-width: 768px) {
+            .current-month {
+                font-size: 18px;
+            }
         }
 
         .form-group {
@@ -195,6 +295,19 @@
             font-family: inherit;
             transition: all 0.2s ease;
             background: #f5f5f7;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        @media (max-width: 768px) {
+            input, textarea {
+                padding: 14px 16px;
+                font-size: 16px;
+            }
+
+            input[type="date"] {
+                min-height: 44px;
+            }
         }
 
         input:focus, textarea:focus {
@@ -219,6 +332,15 @@
             cursor: pointer;
             transition: all 0.2s ease;
             width: 100%;
+            touch-action: manipulation;
+            min-height: 44px;
+        }
+
+        @media (max-width: 768px) {
+            .button {
+                padding: 16px 24px;
+                min-height: 48px;
+            }
         }
 
         .button:hover {
@@ -263,6 +385,14 @@
             transition: all 0.2s ease;
         }
 
+        @media (max-width: 768px) {
+            .reservation-item {
+                padding: 14px;
+                margin-bottom: 10px;
+                border-radius: 10px;
+            }
+        }
+
         .reservation-item:hover {
             background: #e5e5e7;
         }
@@ -303,6 +433,20 @@
             border-radius: 8px;
             transition: all 0.2s ease;
             font-size: 18px;
+            touch-action: manipulation;
+            min-width: 44px;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @media (max-width: 768px) {
+            .icon-button {
+                min-width: 48px;
+                min-height: 48px;
+                font-size: 20px;
+            }
         }
 
         .icon-button:hover {
